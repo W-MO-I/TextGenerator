@@ -14,12 +14,15 @@ from PIL import Image
 
 class DirImageGen(object):
 
-    def __init__(self, image_list: list, len_range=(2, 15)):
+    def __init__(self, image_list: list, len_range=(2,15)):
         """
 
         :param character_seq:
         :param batch_size:
+        :param len_range:       滚，搞啥用的，等等不是再get——next
         """
+
+
         self._image_list = image_list
         # random.shuffle(self.character_seq)
         self._len_range = len_range
@@ -35,7 +38,7 @@ class DirImageGen(object):
             yield cv2.imread(self._image_list[seek])
             seek += 1
 
-
+# 生成背景
 class GenrateGaussImage(object):
 
     def __init__(self, width_range=(1000, 1500), height_range=(1000, 1500)):
@@ -74,7 +77,7 @@ class GenrateGaussImage(object):
         img = cv2.GaussianBlur(img, (k_size, k_size), sigma)
         return img
 
-
+# 生成背景（很花，这哥们自己写着玩的感觉）
 class GenrateQuasicrystalImage(object):
 
     def __init__(self, width_range=(1000, 1500), height_range=(1000, 1500)):
@@ -129,11 +132,13 @@ class GenrateQuasicrystalImage(object):
         return image
 
 
+# 获得一幅合规的背景
 class BackgroundImgProvider(object):
 
     def __init__(self, bg_img_conf):
         self.gen = self.get_generator(bg_img_conf)
 
+    # 生成符合概率，参数的一幅图像
     def get_generator(self, bg_img_conf):
         """
         generator
@@ -142,30 +147,48 @@ class BackgroundImgProvider(object):
         """
         gen_probability = []
         all_generator = []
+
         for item in bg_img_conf:
             t = item['type']
             probability = float(item['probability'])
+            # 用现成的图像
             if t == 'from_dir':
                 bg_img_dir = item['dir']
+                # 所有图像文件路径
                 img_path_list = [os.path.join(bg_img_dir, img) for img in os.listdir(bg_img_dir) if ('.DS' not in img)]
+                # 读取某个图像
                 dir_img_gen = DirImageGen(img_path_list)
+                # 加入列表
                 all_generator.append(dir_img_gen)
+
+            # 额，生成
             elif t == 'from_generate':
+                # eval()确定生成的w,h
                 width_range = eval(item['width_range'])
                 height_range = eval(item['height_range'])
+
+                # 生成背景
                 gauss_img_gen = GenrateGaussImage(width_range=width_range, height_range=height_range)
+                # 图像
                 all_generator.append(gauss_img_gen)
+
+            # 概率列表？？搞啥的
             gen_probability.append(probability)
 
         value_list = gen_probability
         len_gen = len(all_generator)
+
+        # 用于选择合概率的图像
         while True:
             index = Random.random_choice(list(value_list))
             if index <= len_gen and all_generator[index]:
                 np_img = all_generator[index].get_next.__next__()
                 np_img = np_img[..., ::-1]
                 img = Image.fromarray(np_img, mode='RGB')
+                # print(img)
                 yield img
+
+
 
     def generator(self):
         return self.gen.__next__()

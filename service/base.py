@@ -37,6 +37,9 @@ def get_lsvt_data_dir(out_put_dir):
     return lsvt_data
 
 
+
+
+
 def gen_all_pic():
     """
     生成全部图片
@@ -45,13 +48,16 @@ def gen_all_pic():
     from service import conf
     gen_count = conf['base']['count_per_process']
 
+
     index = 0
     while index < gen_count:
-        log.info("-" * 20 + " generate new picture {index}/{gen_count}".format(index=index,
+        log.info("-" * 20 + " generate new picture {index}/{gen_count}".format(index=index+1,
                                                                                gen_count=gen_count) + "-" * 20)
         dump_data = gen_pic()
+
         # 写入label
         if dump_data:
+            # print(dump_data)
             add_label_data(dump_data)
             # 生成voc
             if conf['base']['gen_voc']:
@@ -61,48 +67,209 @@ def gen_all_pic():
             if conf['base']['gen_lsvt']:
                 gen_lsvt(dump_data)
                 index += 1
+        index += 1
 
 
+
+# 生成文本位置
 def gen_pic():
     from service import layout_provider
+
     layout = layout_provider.gen_next_layout()
 
     if not layout.is_empty():
         dump_data = layout.dump()
         # layout.show(draw_rect=True)
+        # print(dump_data)
         return dump_data
     else:
         log.info("-" * 10 + "layout is empty" + "-" * 10)
         return None
 
 
+import csv
 def add_label_data(layout_data):
     """
     写入标签文件
     :return:
     """
     from service import conf
+    # 创建 output->label
     out_put_dir = conf['provider']['layout']['out_put_dir']
-    label_data_dir = get_label_data_dir(out_put_dir=out_put_dir)
-    os.makedirs(label_data_dir, exist_ok=True)
+    # label_data_dir = get_label_data_dir(out_put_dir=out_put_dir)
+    # os.makedirs(label_data_dir, exist_ok=True)
 
-    label_file_path = os.path.join(label_data_dir, "label_{pid}.txt".format(pid=os.getpid()))
-    fragment_dir = get_fragment_dir(out_put_dir)
+    # 创建 output->label->txt
+    # label_file_path = os.path.join(label_data_dir, "label_{pid}.txt".format(pid=os.getpid()))
+    # fragment_dir = get_fragment_dir(out_put_dir)
 
     # 拷贝图片
-    fragment_list = layout_data['fragment']
-    with open(label_file_path, 'a+') as f:
-        for fragment in fragment_list:
-            fragment_name = fragment['fragment_name']
-            fragment_img_src_path = os.path.join(fragment_dir, fragment_name)
-            fragment_img_dst_path = os.path.join(label_data_dir, fragment_name)
-            shutil.copy(fragment_img_src_path, fragment_img_dst_path)
+    # fragment_list = layout_data['fragment']
 
-            txt = fragment['data']
-            img_name = fragment['fragment_name']
-            line = img_name + "^" + txt + os.linesep
-            f.write(line)
+    # 写入txt
+    # with open(label_file_path, 'a+') as f:
+    #     for fragment in fragment_list:
+    #         fragment_name = fragment['fragment_name']
+    #         fragment_img_src_path = os.path.join(fragment_dir, fragment_name)
+    #         fragment_img_dst_path = os.path.join(label_data_dir, fragment_name)
+    #         shutil.copy(fragment_img_src_path, fragment_img_dst_path)
+    #
+    #         txt = fragment['data']
+    #         img_name = fragment['fragment_name']
+    #         line = img_name + "^" + txt + os.linesep
+    #         f.write(line)
+
+
+    ###########################
+
+    # 创建my_data
+    my_data = os.path.join(out_put_dir, "my_data")
+    os.makedirs(my_data, exist_ok=True)
+
+    # my_data下的文件名，创建
+    pic_name = layout_data['pic_name']
+    pic_name = pic_name[:-4]
+    pic_dir = os.path.join(my_data, pic_name)
+    os.makedirs(pic_dir, exist_ok=True)
+
+    # 创建csv，再my_data->对应文件
+    csv_file_path = os.path.join(pic_dir, f"{pic_name}.csv")
+
+
+    # # copy处理后图片
+    # # 图像位置
+    # pic_img_src_path = os.path.join(out_put_dir, 'img')
+    # # 保存位置
+    # shutil.copy(pic_img_src_path, pic_dir)
+
+
+
+
+
+    # box
+    fragment_list = layout_data['fragment']
+    box_data = []
+    string_box = []
+
+    for fragment in fragment_list:
+        fragment_name = fragment['fragment_name']
+
+        # # 拷贝fragment
+        # fragment_img_src_path = os.path.join(fragment_dir, fragment_name)
+        # fragment_img_dst_path = os.path.join(pic_dir, fragment_name)
+        # shutil.copy(fragment_img_src_path, fragment_img_dst_path)
+
+
+        # 获取相关box
+        box = fragment['char_boxes']
+        string = fragment['data']
+
+        box_data.append(box)
+        string_box.append(string)
+
+    # 写入 box 信息
+    with open(csv_file_path, 'w', newline='') as csv_file:
+        writer = csv.writer(csv_file)
+        writer.writerow(["p1", "p2", "p3", "p4", "info"])
+        for i in range(len(box_data)):
+            for j in range(len(box_data[i])):
+                char_box = box_data[i][j]
+                text = string_box[i][j]
+                writer.writerow([char_box[0], char_box[1], char_box[2], char_box[3], text])
+
+
     log.info("gen label data success!")
+
+
+
+
+
+
+
+
+
+
+#
+# def add_label_data(layout_data):
+#     """
+#     写入标签文件
+#     :return:
+#     """
+#     from service import conf
+#     # 创建目录 output->label_data
+#     out_put_dir = conf['provider']['layout']['out_put_dir']
+#     label_data_dir = get_label_data_dir(out_put_dir=out_put_dir)
+#     # print(label_data_dir)
+#     os.makedirs(label_data_dir, exist_ok=True)
+#
+#     # label_data 下图像文件夹
+#     pic_name = layout_data['pic_name']
+#     pic_dir = os.path.join(label_data_dir, pic_name)
+#     os.makedirs(pic_dir, exist_ok=True)
+#
+#     # label_data 下保存csv
+#     csv_file_path = os.path.join(pic_dir, f"{pic_name}.csv")
+#     # output-> img -> fragment的文件夹
+#     fragment_dir = get_fragment_dir(out_put_dir)
+#
+#     # 拷贝图片
+#     fragment_list = layout_data['fragment']
+#     box_data = []
+#     string_box  = []
+#
+#     for fragment in fragment_list:
+#         fragment_name = fragment['fragment_name']
+#         fragment_img_src_path = os.path.join(fragment_dir, fragment_name)
+#         fragment_img_dst_path = os.path.join(pic_dir, fragment_name)
+#         shutil.copy(fragment_img_src_path, fragment_img_dst_path)
+#
+#         #
+#         box = fragment['char_boxes']
+#         string = fragment['data']
+#
+#         box_data.append(box)
+#         string_box.append(string)
+#
+#
+#     # 写入 box 信息
+#     with open(csv_file_path, 'w', newline='') as csv_file:
+#         writer = csv.writer(csv_file)
+#         writer.writerow(["p1", "p2", "p3", "p4", "info"])
+#         for i in range(len(box_data)):
+#             for j in range(len(box_data[i])):
+#                 char_box = box_data[i][j]
+#                 text = string_box[i][j]
+#                 writer.writerow([char_box[0],char_box[1],char_box[2],char_box[3], text])
+#         # writer.writerows(box_data)
+#
+#     # 使用eval
+#     # with open(csv_file_path, 'r') as file:
+#     #     reader = csv.DictReader(file)
+#     #     for row in reader:
+#     #         print(row['p1'])
+#     #         p1_value = eval(row['p1'])
+#     #         print('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',type(p1_value), p1_value)
+#     #         print(p1_value[0])
+#     #         break
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 def gen_voc(layout_data):

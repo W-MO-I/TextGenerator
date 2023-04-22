@@ -64,16 +64,26 @@ class TextImgProvider(NextBlockGenerator):
 
         self.font_file_list = list_font_path(font_file_dir)
         self._font_index = 0
+
         self.text_img_output_dir = text_img_output_dir
         self.text_img_info_output_dir = text_img_info_output_dir
+
         self.font_min_size = font_min_size
         self.font_max_size = font_max_size
+
         self.use_char_common_color_probability = use_char_common_color_probability
+
         self.char_common_color_list = char_common_color_list
+
+        # 边框
+        # char_border_width > 2显示比较合适
         self.char_border_width = char_border_width
         self.char_border_color = eval(char_border_color) if type(char_border_color) is str else char_border_color
+
+        #
         self.auto_padding_to_ratio = auto_padding_to_ratio
 
+        # 打乱字体顺序
         Random.shuffle(self.font_file_list, seed)
 
     def next_font_path(self):
@@ -97,9 +107,11 @@ class TextImgProvider(NextBlockGenerator):
                      padding=(0, 0, 0, 0),
                      align_mode=TYPE_ALIGN_MODEL_C,
                      auto_padding_to_ratio=0.0):
+
+        # string-> char 的打印 size font的列表
         char_obj_list = gen_batch_char_obj(text=text, color=color, font_size=font_size, border_width=border_width,
                                            border_color=border_color)
-
+        # 用char为单位的列表生成图像
         text_img = create(char_obj_list=char_obj_list,
                           orientation=orientation,
                           align_mode=align_mode,

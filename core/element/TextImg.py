@@ -179,8 +179,11 @@ def calc_bg_size(font_path: str,
             # 加上边框尺寸
             char_bg_w += char_obj.border_width * 2
             char_bg_h += char_obj.border_width * 2
+
         except Exception as e:
             traceback.print_exc()
+
+        # 字符信息
         char_obj.size = (char_bg_w, char_bg_h)
 
         # 获取当前行文本的最大字符图片的宽高
@@ -192,6 +195,8 @@ def calc_bg_size(font_path: str,
 
         r = 0 if is_last else spacing_rate
 
+        # 垂直，h累加
+        # 水平，w累加
         if orientation == TYPE_ORIENTATION_VERTICAL:
             bg_w = max_char_bg_w
             bg_h += math.ceil(char_obj.size[1] * (1 + r))
@@ -199,6 +204,8 @@ def calc_bg_size(font_path: str,
             bg_w += math.ceil(char_obj.size[0] * (1 + r))
             bg_h = max_char_bg_h
 
+
+    # 规定长宽比
     if auto_padding_to_ratio > 0:
         # 自动 padding 到指定尺寸
 
@@ -232,33 +239,40 @@ def calc_bg_size(font_path: str,
     return bg_w, bg_h, padding
 
 
+# 绘制文本(垂直，水平，不带背景)
 def draw_text(font_path, bg_w, bg_h, orientation, char_obj_list: List[CharImg], spacing_rate, align_mode, padding):
     """
     在文字贴图背景上绘制文字
     :param font_path:
     :param bg_w:
     :param bg_h:
-    :param orientation:
+    :param orientation:     朝向
     :param char_obj_list:
     :param spacing_rate:
-    :param align_mode:
+    :param align_mode:      文本对齐模式？？？？？
     :param padding:
     :return:
     """
+    # 背景
     img = Image.new("RGBA", (bg_w, bg_h), color=(0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
-
+    # 字符区域
     font_area_w = bg_w - padding[0] - padding[2]
     font_area_h = bg_h - padding[1] - padding[3]
 
     tmp_char = None
+    # 图像坐标(l,t)
     l, t = 0, 0
-    for index, char_obj in enumerate(char_obj_list):
-        font = ImageFont.truetype(font_path, size=char_obj.font_size)
 
+    for index, char_obj in enumerate(char_obj_list):
+        # 字体&大小
+        font = ImageFont.truetype(font_path, size=char_obj.font_size)
+        # 字符w,h
         cw, ch = char_obj.size
 
+        # 字符垂直排列
         if orientation == TYPE_ORIENTATION_VERTICAL:
+            # 咋说呢，好像懂了
             if align_mode == TYPE_ALIGN_MODEL_B:
                 l = 0
             elif align_mode == TYPE_ALIGN_MODEL_C:
@@ -266,17 +280,23 @@ def draw_text(font_path, bg_w, bg_h, orientation, char_obj_list: List[CharImg], 
             elif align_mode == TYPE_ALIGN_MODEL_T:
                 l = font_area_w - cw
 
+            # 非第一个字符，加上上一个的(1+间隔)   间隔是百分比
             if tmp_char:
                 add_t = math.ceil(tmp_char.size[1] * (1 + spacing_rate))
                 t += add_t
             else:
                 t = 0
 
+            # 加paddding
             l += padding[0]
+            # 第一个字符还要加方框的上边界
             if index == 0:
                 t += padding[1]
+            # 得到char的box
             char_obj.box = [l, t, l + cw, t + ch]
 
+        # 水平排列
+        # 妈妈的吻，同理
         else:
             t = 0
             if align_mode == TYPE_ALIGN_MODEL_B:
@@ -297,17 +317,25 @@ def draw_text(font_path, bg_w, bg_h, orientation, char_obj_list: List[CharImg], 
                 l += padding[0]
             char_obj.box = [l, t, l + cw, t + ch]
 
-        log.info("draw text >> {text} color: {color} font: {font}".format(text=char_obj.char,
-                                                                          color=char_obj.color,
-                                                                          font=font))
+        # # 按字符绘制信息日志
+        # log.info("draw text >> {text} color: {color} font: {font}".format(text=char_obj.char,
+        #                                                                   color=char_obj.color,
+        #                                                                   font=font))
+        # (l,t)还要加上边框的宽度，进行绘制
         draw.text((l + char_obj.border_width, t + char_obj.border_width),
                   text=char_obj.char,
                   fill=char_obj.color,
                   font=font)
+
+        # 绘制边框
         if char_obj.border_width > 0:
             draw.rectangle(xy=tuple(char_obj.box), width=char_obj.border_width, outline=char_obj.border_color)
+
+
         tmp_char = char_obj
+
     return img
+
 
 
 def gen_batch_char_obj(text,
@@ -355,6 +383,8 @@ def create(char_obj_list: List[CharImg],
     :return:
     """
     # 生成文本贴图的透明背景区域
+    # 文字string的文本框hw，&padding？？？
+    # 妈的 padding是什么，为什么要4元组
     bg_w, bg_h, padding = calc_bg_size(font_path, orientation, char_obj_list, spacing_rate, padding,
                                        auto_padding_to_ratio)
 

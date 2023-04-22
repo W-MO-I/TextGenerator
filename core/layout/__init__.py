@@ -157,6 +157,7 @@ class BlockGroup:
         """
         from core.layout.strategy import strategy_controller as sc
         strategy = sc.pick(self.strategy_list)
+
         # 尝试生成3次 提高贴图成功率
         retry_times = 5
         while retry_times > 0:
@@ -167,15 +168,16 @@ class BlockGroup:
                 if r:
                     self.block_list.append(block)
                     if isinstance(block, TextBlock):
-                        log.info("add text on box:[{group_box}] [{strategy}] [{orientation}] > {text}".format(
-                            group_box=self.group_box,
-                            strategy=strategy.name(),
-                            text=block.text_img.text,
-                            orientation="h" if block.text_img.orientation == 0 else "v"
-                        ))
+                        pass
+                        # log.info("add text on box:[{group_box}] [{strategy}] [{orientation}] > {text}".format(
+                        #     group_box=self.group_box,
+                        #     strategy=strategy.name(),
+                        #     text=block.text_img.text,
+                        #     orientation="h" if block.text_img.orientation == 0 else "v"
+                        # ))
             if not r:
                 retry_times -= 1
-                log.info("retry auto append block")
+                # log.info("retry auto append block")
 
     def _gen_block(self, strategy: Strategy):
         """
@@ -262,9 +264,15 @@ class Layout:
         self.next_block_generator = next_block_generator
 
         self.block_group_list = []
+
+
+        # 由预选区域->block_group_list 封装为Block类型，在list中
         for group_box in self.group_box_list:
+
             block_group = BlockGroup(bg_img, group_box, rotate_angle_range, self.next_block_generator, strategy_list)
+
             self.block_group_list.append(block_group)
+            # break
 
     def get_all_block_list(self):
         """
@@ -277,6 +285,7 @@ class Layout:
             all_block_list.extend(block_list)
         return all_block_list
 
+
     @count_time(tag="自动生成文字贴图")
     def gen(self):
         """
@@ -286,6 +295,9 @@ class Layout:
         for index, block_group in enumerate(self.block_group_list):
             log.info("start append block ---- {index} ----".format(index=index))
             block_group.auto_append_block()
+            # if index == 0:
+            #     break
+
         self.render()
 
     def is_empty(self):
@@ -297,6 +309,9 @@ class Layout:
             if bg.block_list:
                 return False
         return True
+
+
+
 
     @count_time(tag="区块片收集")
     def collect_block_fragment(self):
@@ -331,6 +346,11 @@ class Layout:
             fragment_info_list.append(item)
         return fragment_info_list
 
+
+
+
+
+
     @count_time("dump layout info")
     def dump(self):
         from service.base import get_data_dir, get_pic_dir, get_fragment_dir
@@ -340,6 +360,7 @@ class Layout:
         pic_dir = get_pic_dir(self.out_put_dir)
         fragment_dir = get_fragment_dir(self.out_put_dir)
         data_dir = get_data_dir(self.out_put_dir)
+
 
         os.makedirs(pic_dir, exist_ok=True)
         os.makedirs(fragment_dir, exist_ok=True)
@@ -351,6 +372,25 @@ class Layout:
         pic_path = os.path.join(pic_dir, pic_name)
         with open(pic_path, 'wb') as f:
             self.bg_img.save(f)
+
+        from service import conf
+        # 创建 output->label
+        out_put_dir = conf['provider']['layout']['out_put_dir']
+        pic1 = "pic_" + name
+        my_data = os.path.join(out_put_dir, "my_data", pic1)
+        os.makedirs(my_data, exist_ok=True)
+
+        pic_dir_my_data = os.path.join(my_data, pic_name)
+
+        with open(pic_dir_my_data, 'wb') as f1:
+            self.bg_img.save(f1)
+
+
+
+
+
+
+
         result['pic_name'] = pic_name
         result['width'] = self.bg_img.width
         result['height'] = self.bg_img.height

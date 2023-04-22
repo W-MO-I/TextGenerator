@@ -46,5 +46,7 @@ def pick(strategy_list) -> Strategy:
     strategy_name = strategy_list[index]['name']
     strategy = get_strategy_by_name(strategy_name)
 
-    log.info("pick strategy: {strategy}".format(strategy=strategy_name))
+    # 选择文本凸显变换策略
+    # log.info("pick strategy: {strategy}".format(strategy=strategy_name))
+    
     return strategy

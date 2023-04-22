@@ -12,6 +12,7 @@ class LayoutProvider:
     def gen_next_layout(self):
         from service import background_img_provider
         bg_img = background_img_provider.gen.__next__()
+        # 背景平滑区域
         group_box_list = gen_group_box_list(bg_img)
 
         layout = layout_factory(
@@ -19,12 +20,14 @@ class LayoutProvider:
             group_box_list=group_box_list,
             out_put_dir=self.out_put_dir,
             rotate_angle_range=self.rotate_angle_range,
+            # config输入的格式
             strategy_list=self.strategy_list
         )
         layout.gen()
         return layout
 
 
+# 处理
 def layout_factory(bg_img: Image.Image,
                    group_box_list: list,
                    out_put_dir,
@@ -49,7 +52,7 @@ def layout_factory(bg_img: Image.Image,
                     strategy_list=strategy_list)
     return layout
 
-
+# 平滑区域位置xy,wh
 def gen_group_box_list(bg_img):
     """
     生成候选区
@@ -63,17 +66,25 @@ def gen_group_box_list(bg_img):
     to_height = 320
     rw = width / to_width
     rh = height / to_height
+    # 按原比例-> 320 320
     bg_img_copy = bg_img.resize(size=(to_width, to_height))
+
+    # 候选区列表
     calc_group_box_list = smooth_area_provider.get_image_rects(np.asarray(bg_img_copy))
     group_box_list = []
+
+    #  按比例还原，得到在原始图像中的候选区列表
     for box in calc_group_box_list:
         group_box_list.append([int(box[0] * rw),
                                int(box[1] * rh),
                                int(box[2] * rw),
                                int(box[3] * rh)])
+
     # 如果智能候选区域为空，则随机生成候选区
     if not group_box_list:
         group_box_list = test_gen_group_box(bg_img)
+    # print(len(group_box_list),group_box_list)
+
     return group_box_list
 
 
